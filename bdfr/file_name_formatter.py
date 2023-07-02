@@ -65,6 +65,9 @@ class FileNameFormatter:
 
         result = result.replace("/", "")
 
+        if result[-1] == '.'
+            result = result[:-1]
+
         if self.restiction_scheme is None:
             if platform.system() == "Windows":
                 result = FileNameFormatter._format_for_windows(result)
@@ -122,7 +125,7 @@ class FileNameFormatter:
     ) -> Path:
         subfolder = Path(
             destination_directory,
-            *[self._format_name(resource.source_submission, part) for part in self.directory_format_string],
+            limit_path_name(*[self._format_name(resource.source_submission, part) for part in self.directory_format_string]),
         )
         index = f"_{index}" if index else ""
         if not resource.extension:
@@ -142,6 +145,13 @@ class FileNameFormatter:
             raise BulkDownloaderException(f"Could not determine path name: {subfolder}, {index}, {resource.extension}")
         return file_path
 
+    def limit_path_name_length(self, subfolder: str)
+        max_subfolder_name = 45
+        subfolder = subfolder[-1]
+        while len(subfolder) > max_subfolder_name
+            subfolder = subfolder[:-1]
+        return subfolder
+
     def limit_file_name_length(self, filename: str, ending: str, root: Path) -> Path:
         root = root.resolve().expanduser()
         possible_id = re.search(r"((?:_\w{6})?$)", filename)
@@ -149,8 +159,8 @@ class FileNameFormatter:
             ending = possible_id.group(1) + ending
             filename = filename[: possible_id.start()]
         max_path = self.max_path
-        max_file_part_length_chars = 255 - len(ending)
-        max_file_part_length_bytes = 255 - len(ending.encode("utf-8"))
+        max_file_part_length_chars = 255 - len(ending) - len(str(root))
+        max_file_part_length_bytes = 255 - len(ending.encode("utf-8")) - len(str(root).encode("utf-8"))
         max_path_length = max_path - len(ending) - len(str(root)) - 1
 
         out = Path(root, filename + ending)
@@ -158,10 +168,11 @@ class FileNameFormatter:
             [
                 len(filename) > max_file_part_length_chars,
                 len(filename.encode("utf-8")) > max_file_part_length_bytes,
-                len(str(out)) > max_path_length,
+                len(str(out)) > max_path - 1
             ]
         ):
             filename = filename[:-1]
+            logger.debug(filename)
             out = Path(root, filename + ending)
 
         return out
@@ -215,7 +226,7 @@ class FileNameFormatter:
 
     @staticmethod
     def _format_for_windows(input_string: str) -> str:
-        invalid_characters = r'<>:"\/|?*'
+        invalid_characters = r'<>:"\/|?*&'
         for char in invalid_characters:
             input_string = input_string.replace(char, "")
         input_string = FileNameFormatter._strip_emojis(input_string)
