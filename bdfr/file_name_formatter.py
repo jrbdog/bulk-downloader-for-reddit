@@ -64,8 +64,9 @@ class FileNameFormatter:
                 result = re.sub(rf"(?i){{{key}}}", key_value, result)
 
         result = result.replace("/", "")
+        result = result.replace("& ", "")
 
-        if result[-1] == '.'
+        if result[-1] == ".":
             result = result[:-1]
 
         if self.restiction_scheme is None:
@@ -125,7 +126,7 @@ class FileNameFormatter:
     ) -> Path:
         subfolder = Path(
             destination_directory,
-            limit_path_name(*[self._format_name(resource.source_submission, part) for part in self.directory_format_string]),
+            *self.limit_path_name_length([self._format_name(resource.source_submission, part) for part in self.directory_format_string]),
         )
         index = f"_{index}" if index else ""
         if not resource.extension:
@@ -145,12 +146,13 @@ class FileNameFormatter:
             raise BulkDownloaderException(f"Could not determine path name: {subfolder}, {index}, {resource.extension}")
         return file_path
 
-    def limit_path_name_length(self, subfolder: str)
+    def limit_path_name_length(self, target_path: list) -> list:
         max_subfolder_name = 45
-        subfolder = subfolder[-1]
-        while len(subfolder) > max_subfolder_name
+        subfolder = target_path[-1]
+        while len(subfolder) > max_subfolder_name:
             subfolder = subfolder[:-1]
-        return subfolder
+        out = [*target_path[:-1], subfolder]
+        return out
 
     def limit_file_name_length(self, filename: str, ending: str, root: Path) -> Path:
         root = root.resolve().expanduser()
@@ -226,7 +228,7 @@ class FileNameFormatter:
 
     @staticmethod
     def _format_for_windows(input_string: str) -> str:
-        invalid_characters = r'<>:"\/|?*&'
+        invalid_characters = r'<>:"\/|?*'
         for char in invalid_characters:
             input_string = input_string.replace(char, "")
         input_string = FileNameFormatter._strip_emojis(input_string)
